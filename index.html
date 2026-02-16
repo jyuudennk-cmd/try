@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>10秒提案電卓</title>
+    <title>10秒シュミレーション</title>
     <style>
         :root {
             --primary: #cc0033; /* ドコモレッド */
@@ -74,7 +74,7 @@
 <body>
 
 <header>
-    <h1>10秒提案電卓</h1>
+    <h1>10秒シュミレーション</h1>
 </header>
 
 <div class="container">
@@ -105,8 +105,8 @@
 
         <div class="select-group">
             <div class="select-btn selected" onclick="setDCard('none')">カードなし</div>
-            <div class="select-btn" onclick="setDCard('regular')">一般(-220)</div>
-            <div class="select-btn" onclick="setDCard('gold')">GOLD(-550)</div>
+            <div class="select-btn" onclick="setDCard('regular')">REGULAR(-220)</div>
+            <div class="select-btn" onclick="setDCard('gold')">GOLD/PLATINUM(-550)</div>
         </div>
 
         <div class="select-group">
@@ -133,7 +133,7 @@
         </div>
         <div class="plan-btn" id="plan-ahamo" onclick="selectPlan('ahamo')">
             <span class="plan-name">ahamo</span>
-            <span class="plan-desc">30GB・割引なし</span>
+            <span class="plan-desc">30GB</span>
             <div class="cap-alert">容量不足</div>
         </div>
         <div class="plan-btn" id="plan-mini10" onclick="selectPlan('mini10')">
@@ -355,3 +355,4 @@
 
 </body>
 </html>
+
