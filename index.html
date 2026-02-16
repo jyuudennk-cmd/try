@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>10秒提案電卓</title>
+    <style>
+        :root {
+            --primary: #cc0033; /* ドコモレッド */
+            --primary-light: #ffe5ea;
+            --bg: #f5f7fa;
+            --text: #333;
+            --card-bg: #fff;
+            --accent: #0099cc; /* 提案ブルー */
+            --android-green: #3DDC84; /* Androidグリーン */
+            --iphone-black: #000000; /* iPhoneブラック */
+        }
+        body { font-family: "Helvetica Neue", Arial, sans-serif; background: var(--bg); margin: 0; color: var(--text); -webkit-user-select: none; padding-bottom: 50px; }
+        
+        header { background: var(--primary); color: white; padding: 15px; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h1 { margin: 0; font-size: 1.1rem; font-weight: bold; }
+        
+        .container { max-width: 500px; margin: 0 auto; padding: 15px; }
+        
+        /* デバイス切替スイッチ（iOS風） */
+        .device-toggle-container {
+            display: flex;
+            background: #e0e0e0;
+            border-radius: 30px;
+            padding: 4px;
+            margin-bottom: 20px;
+            position: relative;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .device-btn {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: pointer;
+            z-index: 2;
+            transition: color 0.3s;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        .device-btn.active {
+            color: white;
+        }
+        
+        /* スライドする背景 */
+        .slider-bg {
+            position: absolute;
+            top: 4px;
+            bottom: 4px;
+            width: calc(50% - 4px);
+            border-radius: 25px;
+            background: var(--iphone-black);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            z-index: 1;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        /* Android選択時のスライダー位置 */
+        .slider-bg.android-pos {
+            left: 50%;
+            background: var(--android-green);
+        }
+        .slider-bg.iphone-pos {
+            left: 4px;
+            background: var(--iphone-black);
+        }
+
+        /* 入力エリア */
+        .input-section { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; text-align: center; }
+        .input-label { font-size: 0.9rem; color: #666; margin-bottom: 10px; display: block; font-weight: bold; }
+        .currency-input { font-size: 2rem; width: 80%; text-align: center; border: none; border-bottom: 2px solid var(--primary); outline: none; font-weight: bold; color: var(--text); background: transparent; }
+        .currency-input::placeholder { color: #ccc; }
+        
+        /* 条件スイッチ */
+        .toggle-section { display: flex; gap: 10px; margin-bottom: 20px; justify-content: space-between; }
+        .toggle-btn { flex: 1; background: #e0e0e0; padding: 12px 5px; border-radius: 8px; font-size: 0.8rem; font-weight: bold; color: #555; cursor: pointer; text-align: center; transition: 0.2s; border: 2px solid transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60px; }
+        .toggle-btn.active { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
+        .toggle-icon { font-size: 1.2rem; margin-bottom: 4px; display: block; }
+        
+        /* プラン選択 */
+        .plan-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .plan-btn { background: white; border: 2px solid #ddd; padding: 15px; border-radius: 10px; text-align: center; cursor: pointer; transition: 0.2s; position: relative; }
+        .plan-btn.selected { border-color: var(--primary); background: var(--primary-light); color: var(--primary); font-weight: bold; box-shadow: 0 4px 10px rgba(204, 0, 51, 0.2); transform: translateY(-2px); }
+        .plan-name { font-size: 1rem; font-weight: bold; display: block; }
+        .plan-desc { font-size: 0.7rem; color: #666; margin-top: 4px; display: block; }
+        
+        /* 結果表示エリア */
+        .result-section { background: white; border-radius: 16px; padding: 25px; text-align: center; box-shadow: 0 8px 20px rgba(0,0,0,0.1); border-top: 5px solid var(--accent); animation: popIn 0.5s ease; transition: border-color 0.3s; }
+        
+        /* デバイス別のボーダー色変更 */
+        .result-section.iphone-mode { border-top-color: var(--iphone-black); }
+        .result-section.android-mode { border-top-color: var(--android-green); }
+
+        .result-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 0.9rem; color: #555; }
+        .new-price { font-size: 1.8rem; font-weight: bold; color: var(--text); }
+        
+        .diff-area { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ddd; }
+        .diff-label { font-size: 0.9rem; color: var(--accent); font-weight: bold; margin-bottom: 5px; display: block; }
+        .diff-value { font-size: 2.8rem; font-weight: 800; color: var(--accent); line-height: 1; }
+        .diff-unit { font-size: 1rem; font-weight: bold; }
+        
+        /* 提案メッセージボックス */
+        .diff-msg { font-size: 0.95rem; margin-top: 15px; padding: 12px; border-radius: 8px; font-weight: bold; line-height: 1.4; transition: all 0.3s; }
+        
+        /* iPhone時のメッセージスタイル */
+        .iphone-msg { background: #f0f0f0; color: #333; border-left: 5px solid #000; }
+        /* Android時のメッセージスタイル */
+        .android-msg { background: #e8f5e9; color: #2e7d32; border-left: 5px solid #3DDC84; }
+
+        .recommend-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; color: white; margin-bottom: 5px; background: #666; }
+
+        /* スライダー（人数） */
+        .slider-container { margin-bottom: 20px; background: white; padding: 15px; border-radius: 12px; }
+        .slider-label { display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: bold; margin-bottom: 10px; }
+        input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; }
+
+        @keyframes popIn {
+            0% { transform: scale(0.9); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .reset-btn { background: #666; color: white; border: none; padding: 10px 20px; border-radius: 20px; margin-top: 20px; cursor: pointer; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>10秒提案電卓</h1>
+</header>
+
+<div class="container">
+    
+    <div class="device-toggle-container">
+        <div class="slider-bg iphone-pos" id="slider-bg"></div>
+        <div class="device-btn active" id="btn-iphone" onclick="setDevice('iphone')">
+            <span></span> 現在 iPhone
+        </div>
+        <div class="device-btn" id="btn-android" onclick="setDevice('android')">
+            <span>🤖</span> 現在 Android
+        </div>
+    </div>
+
+    <div class="input-section">
+        <label class="input-label">現在のお支払い額（月額）</label>
+        <input type="tel" id="currentBill" class="currency-input" placeholder="例: 12000" oninput="calculate()">
+        <div style="font-size: 1.2rem; display:inline;">円</div>
+    </div>
+
+    <div class="toggle-section">
+        <div class="toggle-btn" id="btn-hikari" onclick="toggle('hikari')">
+            <span class="toggle-icon">🏠</span>
+            光/home 5G
+        </div>
+        <div class="toggle-btn" id="btn-card" onclick="toggle('card')">
+            <span class="toggle-icon">💳</span>
+            dカード
+        </div>
+    </div>
+
+    <div class="slider-container">
+        <div class="slider-label">
+            <span>みんなドコモ割人数</span>
+            <span id="family-count-display" style="color:var(--primary)">1人</span>
+        </div>
+        <input type="range" id="family-slider" min="1" max="3" value="1" step="1" oninput="updateFamily(this.value)">
+        <div style="font-size:0.7rem; color:#888; text-align:right; margin-top:4px;">※3人以上で最大割引</div>
+    </div>
+
+    <div class="plan-selector">
+        <div class="plan-btn selected" id="plan-max" onclick="selectPlan('max')">
+            <span class="plan-name">ドコモ MAX</span>
+            <span class="plan-desc">無制限・使い放題</span>
+        </div>
+        <div class="plan-btn" id="plan-ahamo" onclick="selectPlan('ahamo')">
+            <span class="plan-name">ahamo</span>
+            <span class="plan-desc">30GB/5分通話</span>
+        </div>
+        <div class="plan-btn" id="plan-mini" onclick="selectPlan('mini')">
+            <span class="plan-name">ドコモ mini</span>
+            <span class="plan-desc">3GB・ライト</span>
+        </div>
+        <div class="plan-btn" id="plan-eximo" onclick="selectPlan('eximo')">
+            <span class="plan-name">eximo</span>
+            <span class="plan-desc">〜無制限</span>
+        </div>
+    </div>
+
+    <div class="result-section iphone-mode" id="result-box">
+        <div class="result-row">
+            <span>ドコモ新料金:</span>
+            <span class="new-price"><span id="newPrice">---</span> <span style="font-size:1rem">円</span></span>
+        </div>
+        
+        <div class="diff-area">
+            <span class="diff-label">毎月の浮くお金（差額）</span>
+            <div class="diff-value">
+                <span id="diffPrice">0</span>
+                <span class="diff-unit">円</span>
+            </div>
+            
+            <div class="diff-msg iphone-msg" id="diffMsg">
+                現在の料金を入力してください
+            </div>
+        </div>
+        <div style="margin-top:15px; font-size:0.8rem; color:#999;">※金額は税込概算です。別途ユニバ料等がかかります。</div>
+        
+        <button class="reset-btn" onclick="resetAll()">リセット</button>
+    </div>
+
+</div>
+
+<script>
+    // ■ 設定値（2026年想定）
+    const CONFIG = {
+        plans: {
+            max: 7650,   // ドコモMAX
+            eximo: 7315, // eximo
+            ahamo: 2970, // ahamo 30GB
+            mini: 2167   // mini 3GB
+        },
+        discounts: {
+            hikari: 1210,
+            family_3: 1210,
+            family_2: 550,
+            dcard: 187,
+            dcard_mini: 550
+        },
+        // ■端末実質負担額の目安（カエドキプログラム想定）
+        devices: {
+            iphone17_pro: 4500, // 月額目安
+            iphone17: 2800,     // 月額目安
+            pixel9a: 1200       // 月額目安（安い！）
+        }
+    };
+
+    let state = {
+        currentBill: 0,
+        plan: 'max',
+        hikari: false,
+        dcard: false,
+        family: 1,
+        deviceType: 'iphone' // 'iphone' or 'android'
+    };
+
+    // デバイス切替処理
+    function setDevice(type) {
+        state.deviceType = type;
+        
+        // UI更新（スライダーアニメーション）
+        const slider = document.getElementById('slider-bg');
+        const btnIphone = document.getElementById('btn-iphone');
+        const btnAndroid = document.getElementById('btn-android');
+        const resultBox = document.getElementById('result-box');
+        const diffMsg = document.getElementById('diffMsg');
+
+        if (type === 'iphone') {
+            slider.classList.remove('android-pos');
+            slider.classList.add('iphone-pos');
+            btnIphone.classList.add('active');
+            btnAndroid.classList.remove('active');
+            
+            resultBox.classList.remove('android-mode');
+            resultBox.classList.add('iphone-mode');
+            
+            diffMsg.classList.remove('android-msg');
+            diffMsg.classList.add('iphone-msg');
+        } else {
+            slider.classList.remove('iphone-pos');
+            slider.classList.add('android-pos');
+            btnAndroid.classList.add('active');
+            btnIphone.classList.remove('active');
+
+            resultBox.classList.remove('iphone-mode');
+            resultBox.classList.add('android-mode');
+
+            diffMsg.classList.remove('iphone-msg');
+            diffMsg.classList.add('android-msg');
+        }
+        calculate();
+    }
+
+    function toggle(key) {
+        state[key] = !state[key];
+        document.getElementById(`btn-${key}`).classList.toggle('active');
+        calculate();
+    }
+
+    function updateFamily(val) {
+        state.family = parseInt(val);
+        document.getElementById('family-count-display').textContent = val >= 3 ? "3人以上" : val + "人";
+        calculate();
+    }
+
+    function selectPlan(planKey) {
+        state.plan = planKey;
+        document.querySelectorAll('.plan-btn').forEach(el => el.classList.remove('selected'));
+        document.getElementById(`plan-${planKey}`).classList.add('selected');
+        calculate();
+    }
+
+    function calculate() {
+        const inputVal = document.getElementById('currentBill').value;
+        state.currentBill = inputVal ? parseInt(inputVal) : 0;
+
+        let basePrice = CONFIG.plans[state.plan];
+        let discountTotal = 0;
+
+        if (state.plan === 'ahamo') {
+            discountTotal = 0;
+        } else if (state.plan === 'mini') {
+            if (state.hikari) discountTotal += CONFIG.discounts.hikari;
+            if (state.dcard) discountTotal += CONFIG.discounts.dcard_mini;
+        } else {
+            if (state.hikari) discountTotal += CONFIG.discounts.hikari;
+            if (state.dcard) discountTotal += CONFIG.discounts.dcard;
+            if (state.family >= 3) discountTotal += CONFIG.discounts.family_3;
+            else if (state.family == 2) discountTotal += CONFIG.discounts.family_2;
+        }
+
+        const finalPrice = Math.max(0, basePrice - discountTotal);
+        const diff = state.currentBill - finalPrice;
+
+        document.getElementById('newPrice').textContent = finalPrice.toLocaleString();
+        
+        const diffEl = document.getElementById('diffPrice');
+        const msgEl = document.getElementById('diffMsg');
+
+        if (state.currentBill > 0) {
+            diffEl.textContent = diff.toLocaleString();
+            
+            if (diff > 0) {
+                // ■ 提案ロジック分岐（ここが重要）
+                let msg = "";
+                
+                if (state.deviceType === 'iphone') {
+                    // iPhoneユーザーへの提案（iPhone 17推し）
+                    if (diff >= CONFIG.devices.iphone17_pro) {
+                        msg = `<span class="recommend-badge">RECOMMEND</span><br>浮いたお金で <strong>iPhone 17 Pro</strong> が実質負担0円で持てます！`;
+                    } else if (diff >= CONFIG.devices.iphone17) {
+                        msg = `<span class="recommend-badge">RECOMMEND</span><br><strong>iPhone 17</strong> (無印) の分割代がチャラになります！`;
+                    } else if (diff >= 1000) {
+                        msg = `<strong>iPhone 17</strong> の分割負担を<br>月々 ${diff}円 も減らせます！`;
+                    } else {
+                        msg = "アクセサリやiCloud容量の足しになります！";
+                    }
+                } else {
+                    // Androidユーザーへの提案（Pixel 9a推し）
+                    if (diff >= 2000) {
+                        msg = `<span class="recommend-badge">RECOMMEND</span><br>浮いたお金で <strong>Pixel 9a</strong> を持ってもお釣りが来ます！`;
+                    } else if (diff >= CONFIG.devices.pixel9a) {
+                        msg = `<span class="recommend-badge">RECOMMEND</span><br><strong>Pixel 9a</strong> が実質負担0円で持てます！`;
+                    } else {
+                        msg = `<strong>Pixel 9a</strong> の分割負担を<br>大幅に減らせます！`;
+                    }
+                }
+
+                diffEl.style.color = state.deviceType === 'iphone' ? "#000" : "#2e7d32";
+                msgEl.innerHTML = msg;
+
+            } else {
+                diffEl.style.color = "#cc0033"; 
+                msgEl.textContent = "料金は上がりますが、通信品質/サポートが向上します。";
+            }
+        } else {
+            diffEl.textContent = "0";
+            diffEl.style.color = "#ccc";
+            msgEl.textContent = "現在の料金を入力すると、最適な端末提案が表示されます";
+        }
+    }
+
+    function resetAll() {
+        document.getElementById('currentBill').value = '';
+        state.currentBill = 0;
+        state.hikari = false;
+        state.dcard = false;
+        state.family = 1;
+        
+        document.getElementById('btn-hikari').classList.remove('active');
+        document.getElementById('btn-card').classList.remove('active');
+        document.getElementById('family-slider').value = 1;
+        document.getElementById('family-count-display').textContent = "1人";
+        
+        selectPlan('max'); 
+        setDevice('iphone'); // デフォルトに戻す
+    }
+
+    calculate();
+</script>
+
+</body>
+</html>
